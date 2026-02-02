@@ -17,6 +17,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        arch: [amd64, arm64]
         include:
           - os: ubuntu-24.04
             base_image: ubuntu:24.04
@@ -29,8 +30,8 @@ jobs:
           - os: fedora-rawhide
             base_image: fedora:rawhide
 
-    name: "Run Unit tests on ${{ matrix.os }}"
-    runs-on: ubuntu-latest
+    name: "Run Unit tests on ${{ matrix.os }} (${{ matrix.arch }})"
+    runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     defaults:
       run:
         shell: bash
@@ -90,13 +91,13 @@ jobs:
         context: .
         push: false
         load: true
-        tags: gef-test:${{ matrix.os }}
-        cache-from: type=gha,scope=${{ matrix.os }}
-        cache-to: type=gha,mode=max,scope=${{ matrix.os }}
+        tags: gef-test:${{ matrix.os }}-${{ matrix.arch }}
+        cache-from: type=gha,scope=${{ matrix.os }}-${{ matrix.arch }}
+        cache-to: type=gha,mode=max,scope=${{ matrix.os }}-${{ matrix.arch }}
 
     - name: Run tests in container
       run: |
-        docker run --privileged --rm -v "$PWD:/gef" gef-test:${{ matrix.os }} bash -c '
+        docker run --privileged --rm -v "$PWD:/gef" gef-test:${{ matrix.os }}-${{ matrix.arch }} bash -c '
           PY_VER=$(gdb -q -nx -ex "pi print('\''.'\''.join(map(str, sys.version_info[:2])))" -ex quit 2>/dev/null || echo "3")
           GEF_CI_NB_CPU=$(grep -c ^processor /proc/cpuinfo)
 
